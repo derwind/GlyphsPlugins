@@ -20,7 +20,7 @@ class ShowPosition (PalettePlugin):
     textField = objc.IBOutlet()
 
     def settings(self):
-        self.name = Glyphs.localize({'en': u'Show Position'})
+        self.name = Glyphs.localize({'en': u'Mouse Position'})
 
         # Load .nib dialog (without .extension)
         self.loadNib('IBdialog', __file__)
