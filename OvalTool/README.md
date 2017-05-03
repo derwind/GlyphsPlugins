@@ -8,7 +8,7 @@ It displays oval in the glyph view.
 ### Installation
 
 1. Download the complete ZIP file and unpack it, or clone the repository.
-2. Double click the .glyphsPalette file. Confirm the dialog that appears in Glyphs.
+2. Double click the .glyphsTool file. Confirm the dialog that appears in Glyphs.
 3. Restart Glyphs
 
 ### Requirements
