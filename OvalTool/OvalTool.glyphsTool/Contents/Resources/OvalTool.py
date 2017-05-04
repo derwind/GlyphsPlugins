@@ -56,7 +56,7 @@ class OvalTool(SelectTool):
 
         if not self.valid:
             return
-        NSColor.redColor().set()
+        NSColor.redColor().colorWithAlphaComponent_(.3).set()
         rect = NSMakeRect(self.x-self.a, self.y-self.b, self.a*2, self.b*2)
         path = NSBezierPath.alloc().init()
         path.appendBezierPathWithOvalInRect_(rect)
