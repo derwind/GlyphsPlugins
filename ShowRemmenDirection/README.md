@@ -3,7 +3,7 @@
 This is a plugin for the [Glyphs font editor](https://glyphsapp.com/) by Georg Seifert.
 It displays the remmen direction in the glyph view.
 
-![](./PitchWork.png)
+![](./RemmenDirection.png)
 
 ### Installation
 
