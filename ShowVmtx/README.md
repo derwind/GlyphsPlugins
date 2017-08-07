@@ -1,7 +1,7 @@
 # ShowVmtx.glyphsReporter
 
 This is a plugin for the [Glyphs font editor](https://glyphsapp.com/) by Georg Seifert.
-It displays oval in the glyph view.
+It displays a square corresponding to vmtx (vertical metrics) in the glyph view.
 
 ![](./Vmtx.png)
 
