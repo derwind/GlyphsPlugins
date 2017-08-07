@@ -18,6 +18,7 @@ class ShowPosition (PalettePlugin):
 
     dialog = objc.IBOutlet()
     textField = objc.IBOutlet()
+    dialogName = "ShowPosition"
 
     def settings(self):
         self.name = Glyphs.localize({'en': u'Mouse Position'})
