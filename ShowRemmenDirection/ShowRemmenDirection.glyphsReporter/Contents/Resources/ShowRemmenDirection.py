@@ -109,10 +109,6 @@ def center_vector_oval(oval_path):
     pt2 = oval_path.nodes[2+3]
     pt3 = oval_path.nodes[2+6]
     pt4 = oval_path.nodes[2+9]
-    print pt1.x, pt1.y
-    print pt2.x, pt2.y
-    print pt3.x, pt3.y
-    print pt4.x, pt4.y
 
     d13 = dist(pt1, pt3)
     d24 = dist(pt2, pt4)
