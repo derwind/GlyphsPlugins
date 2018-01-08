@@ -21,16 +21,21 @@ from detect_intersections import DetectIntersections
 
 class ShowIntersections(ReporterPlugin):
 
-    intersections = None
+    def __init(self):
+        # XXX: __init__ is not called?
+        self.intersections = None
+        self.glyphOrder = [g.name for g in Glyphs.font.glyphs]
 
     def settings(self):
         self.menuName = Glyphs.localize({'en': u'Intersections'})
 
     def background(self, layer):
+        if not hasattr(self, "intersections"):
+            self.__init()
         if self.intersections is None:
             detector = DetectIntersections(Glyphs.font.filepath)
             glyph = layer.parent
-            self.intersections = detector.detect(glyph.name)
+            self.intersections = detector.detect(self.get_glyph_name_in_font(glyph.name, detector))
 
         r = 10
         self.draw_intersections(self.intersections, r)
@@ -44,6 +49,13 @@ class ShowIntersections(ReporterPlugin):
             path.appendBezierPathWithOvalInRect_(rect)
             path.setLineWidth_(5)
             path.stroke()
+
+    def get_glyph_name_in_font(self, name, detector):
+        if detector._is_cjk:
+            gid = self.glyphOrder.index(name)
+            return detector.gid2name(gid)
+        else:
+            return name
 
     def inactiveLayers(self, layer):
         self.intersections = None
