@@ -12,7 +12,7 @@
 ###########################################################################################################
 
 
-import sys
+import os, sys
 low_priority_path = "/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python"
 sys.path.remove(low_priority_path)
 sys.path.append(low_priority_path)
@@ -33,6 +33,10 @@ class ShowIntersections(ReporterPlugin):
         if not hasattr(self, "intersections"):
             self.__init()
         if self.intersections is None:
+            basename, ext = os.path.splitext(os.path.basename(Glyphs.font.filepath))
+            if ext != ".otf" and ext != ".ttf":
+                return
+
             detector = DetectIntersections(Glyphs.font.filepath)
             glyph = layer.parent
             self.intersections = detector.detect(self.get_glyph_name_in_font(glyph.name, detector))
@@ -59,3 +63,12 @@ class ShowIntersections(ReporterPlugin):
 
     def inactiveLayers(self, layer):
         self.intersections = None
+
+    def documentWasSaved(self, notification):
+        self.intersections = None
+
+    def willActivate(self):
+        Glyphs.addCallback(self.documentWasSaved, DOCUMENTWASSAVED)
+
+    def willDeactivate(self):
+        Glyphs.removeCallback(self.documentWasSaved, DOCUMENTWASSAVED)
