@@ -7,7 +7,7 @@ It displays intersections by red circles in the glyph view.
 
 ### Installation
 
-1. Install [bezier](https://pypi.python.org/pypi/bezier) library (and depending libraries: `numpy` and `enum`) under ~/Library/Application Support/Glyphs/Scripts. (It may be easy way to pip `bezier` in your virtualenv and copy `bezier`, `numpy`, `enum` to ~/Library/Application Support/Glyphs/Scripts.)
+1. Install [bezier](https://pypi.python.org/pypi/bezier) library (and depending libraries: `numpy`, `enum` and `six.py`) under ~/Library/Application Support/Glyphs/Scripts. (It may be easy way to pip `bezier` in your virtualenv and copy `bezier`, `numpy`, `enum`, `six.py` to ~/Library/Application Support/Glyphs/Scripts.)
 2. Download the complete ZIP file and unpack it, or clone the repository.
 3. Double click the .glyphsReporter file. Confirm the dialog that appears in Glyphs.
 4. Restart Glyphs
