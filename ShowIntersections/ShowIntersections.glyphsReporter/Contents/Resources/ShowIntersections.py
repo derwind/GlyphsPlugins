@@ -16,8 +16,10 @@ import os, sys
 low_priority_path = "/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python"
 sys.path.remove(low_priority_path)
 sys.path.append(low_priority_path)
+import numpy as np
+import bezier, bezier.curve
 from GlyphsApp.plugins import *
-from detect_intersections import DetectIntersections
+from detect_intersections import BaseDetectIntersections, DetectIntersections
 
 class ShowIntersections(ReporterPlugin):
 
@@ -34,15 +36,42 @@ class ShowIntersections(ReporterPlugin):
             self.__init()
         if self.intersections is None:
             basename, ext = os.path.splitext(os.path.basename(Glyphs.font.filepath))
-            if ext != ".otf" and ext != ".ttf":
-                return
-
-            detector = DetectIntersections(Glyphs.font.filepath)
-            glyph = layer.parent
-            self.intersections = detector.detect(self.get_glyph_name_in_font(glyph.name, detector))
+            if ext == ".otf" or ext == ".ttf":
+                detector = DetectIntersections(Glyphs.font.filepath)
+                glyph = layer.parent
+                self.intersections = detector.detect(self.get_glyph_name_in_font(glyph.name, detector))
+            else:
+                contours = self.paths2curves(layer.paths)
+                detector = BaseDetectIntersections()
+                self.intersections = detector.detect_intersections(contours)
 
         r = 10
         self.draw_intersections(self.intersections, r)
+
+    def paths2curves(self, paths):
+        contours = []
+        for path in paths:
+            contour = []
+            for segment in path.segments:
+                pts = []
+                if len(segment.points) == 2:
+                    pt0 = self.double((segment.points[0].x, segment.points[0].y))
+                    pt1 = self.double((segment.points[-1].x, segment.points[-1].y))
+                    pts = [pt0, pt0, pt1, pt1]
+                else:
+                    pt0 = self.double((segment.points[0].x, segment.points[0].y))
+                    pt1 = self.double((segment.points[1].x, segment.points[1].y))
+                    pt2 = self.double((segment.points[2].x, segment.points[2].y))
+                    pt3 = self.double((segment.points[3].x, segment.points[3].y))
+                    pts = [pt0, pt1, pt2, pt3]
+                nodes = np.asfortranarray(pts)
+                curve = bezier.Curve(nodes, degree=3)
+                contour.append(curve)
+            contours.append(contour)
+        return contours
+
+    def double(self, pt):
+        return (float(pt[0]), float(pt[1]))
 
     def draw_intersections(self, intersections, r):
         #NSColor.redColor().colorWithAlphaComponent_(.3).set()
