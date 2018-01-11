@@ -26,6 +26,7 @@ class ShowIntersections(ReporterPlugin):
     def __init(self):
         # XXX: __init__ is not called?
         self.intersections = None
+        self.current_glyph_name = None
         self.glyphOrder = [g.name for g in Glyphs.font.glyphs]
 
     def settings(self):
@@ -34,11 +35,14 @@ class ShowIntersections(ReporterPlugin):
     def background(self, layer):
         if not hasattr(self, "intersections"):
             self.__init()
+        glyph = layer.parent
+        if glyph.name != self.current_glyph_name:
+            self.current_glyph_name = glyph.name
+            self.intersections = None
         if self.intersections is None:
             basename, ext = os.path.splitext(os.path.basename(Glyphs.font.filepath))
             if ext == ".otf" or ext == ".ttf":
                 detector = DetectIntersections(Glyphs.font.filepath)
-                glyph = layer.parent
                 self.intersections = detector.detect(self.get_glyph_name_in_font(glyph.name, detector))
             else:
                 contours = self.paths2curves(layer.paths)
@@ -90,8 +94,8 @@ class ShowIntersections(ReporterPlugin):
         else:
             return name
 
-    def inactiveLayers(self, layer):
-        self.intersections = None
+    #def inactiveLayers(self, layer):
+    #    self.intersections = None
 
     def documentWasSaved(self, notification):
         self.intersections = None
