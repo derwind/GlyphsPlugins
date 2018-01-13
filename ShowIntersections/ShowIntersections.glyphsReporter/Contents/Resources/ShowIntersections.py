@@ -45,16 +45,17 @@ class ShowIntersections(ReporterPlugin):
                 detector = DetectIntersections(Glyphs.font.filepath)
                 self.intersections = detector.detect(self.get_glyph_name_in_font(glyph.name, detector))
             else:
-                contours = self.paths2curves(layer.paths)
+                contours = self.layer2curves(layer)
                 detector = BaseDetectIntersections()
                 self.intersections = detector.detect_intersections(contours)
 
         r = 10
         self.draw_intersections(self.intersections, r)
 
-    def paths2curves(self, paths):
-        contours = []
-        for path in paths:
+    def layer2curves(self, layer, contours=None):
+        if contours is None:
+            contours = []
+        for path in layer.paths:
             contour = []
             for segment in path.segments:
                 pts = []
@@ -72,6 +73,9 @@ class ShowIntersections(ReporterPlugin):
                 curve = bezier.Curve(nodes, degree=3)
                 contour.append(curve)
             contours.append(contour)
+
+        for component in layer.components:
+            contours = self.layer2curves(Glyphs.font.glyphs[component.componentName].layers[0], contours)
         return contours
 
     def double(self, pt):
