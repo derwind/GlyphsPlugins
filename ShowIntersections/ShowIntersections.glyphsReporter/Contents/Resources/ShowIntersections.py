@@ -59,18 +59,22 @@ class ShowIntersections(ReporterPlugin):
             contour = []
             for segment in path.segments:
                 pts = []
-                if len(segment.points) == 2:
-                    pt0 = self.double((segment.points[0].x, segment.points[0].y))
-                    pt1 = self.double((segment.points[-1].x, segment.points[-1].y))
-                    pts = [pt0, pt0, pt1, pt1]
-                else:
+                degree = 3
+                if len(segment.points) <= 1:
+                    continue
+                if segment.type == "line":
                     pt0 = self.double((segment.points[0].x, segment.points[0].y))
                     pt1 = self.double((segment.points[1].x, segment.points[1].y))
-                    pt2 = self.double((segment.points[2].x, segment.points[2].y))
-                    pt3 = self.double((segment.points[3].x, segment.points[3].y))
-                    pts = [pt0, pt1, pt2, pt3]
+                    pts = [pt0, pt0, pt1, pt1]
+                elif segment.type == "qcurve":
+                    pts = [self.double((point.x, point.y)) for point in segment.points]
+                    degree = 2
+                elif segment.type == "curve":
+                    pts = [self.double((point.x, point.y)) for point in segment.points]
+                else:
+                    continue
                 nodes = np.asfortranarray(pts)
-                curve = bezier.Curve(nodes, degree=3)
+                curve = bezier.Curve(nodes, degree=degree)
                 contour.append(curve)
             contours.append(contour)
 
