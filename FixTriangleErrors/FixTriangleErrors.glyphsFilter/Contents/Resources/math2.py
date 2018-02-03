@@ -6,7 +6,7 @@ import math
 def solve_intersection(points):
     p0, p1, p2, p3 = points
 
-    det = (p1.x-p1.x)*(p3.y-p2.y)-(p1.y-p0.y)*(p3.x-p2.x)
+    det = (p1.x-p0.x)*(p3.y-p2.y)-(p1.y-p0.y)*(p3.x-p2.x)
     if det == 0:
         return None
     return ((p3.y-p2.y)*(p3.x-p0.x)-(p3.x-p2.x)*(p3.y-p0.y))/det, (-(p1.y-p0.y)*(p3.x-p0.x)+(p1.x-p0.x)*(p3.y-p0.y))/det
