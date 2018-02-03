@@ -17,6 +17,7 @@
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
+from math2 import solve_intersection, dist, twenty_times_segment_area, Vector
 
 class FixTriangleErrors(FilterWithDialog):
 
@@ -62,8 +63,68 @@ class FixTriangleErrors(FilterWithDialog):
             # Called on font export
             pass
 
+        for path in layer.paths:
+            for segment in path.segments:
+                if segment.type != "curve":
+                    continue
+                if not self.has_triangle_error_in(segment.points):
+                    continue
+                self.fix_triangle_error(segment)
+
+    def fix_triangle_error(self, segment):
+        # area1 := twenty_times_segment_area([p0, p1, p2, p3])
+        # area2 := twenty_times_segment_area([p0, p0+s*(p1-p0)+p0, p3+t*(p2-p3), p3])
+        # area := abs(area2 - area1)
+        # (Problem) Assuming that 's' is given, then solve 't' which minimizes the area.
+        # (Solution) Expand given formula and set area = abs(a*s*t + b*t + c*s + d), then t = - (c*s+d)/(a*s+b).
+        points = self.gsnodes2vectors(segment.points)
+        p0, p1, p2, p3 = points
+        area1 = twenty_times_segment_area(points)
+        a = 3*((p1-p0)*(p2-p3))
+        b = 6*(p2*p3+p0*(p2-p3))
+        c = 6*(p0*p1+(p1-p0)*p3)
+        d = 10*(p0*p3) - area1
+        candidates = self.calculate_s_t_candidates(p0, p1, p2, p3, a, b, c, d)
+        for s, t in candidates:
+            p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
+            p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
+            points = [p0, p1_, p2_, p3]
+            if not self.has_triangle_error_in(points):
+                segment.points[1].x = p1_.x
+                segment.points[1].y = p1_.y
+                segment.points[2].x = p2_.x
+                segment.points[2].y = p2_.y
+                return
+
+    def calculate_s_t_candidates(self, p0, p1, p2, p3, a, b, c, d):
+        candidates = []
+        ratios = [0.9, 0.8, 0.7]
+        if dist(p0, p1) >= dist(p2, p3):
+            for s in ratios:
+                if a*s+b == 0:
+                    continue
+                t = - 1.*(c*s+d)/(a*s+b)
+                candidates.append((s, t))
+        else:
+            for t in ratios:
+                if a*t+c == 0:
+                    continue
+                s = - 1.*(b*t+d)/(a*t+c)
+                candidates.append((s, t))
+        return candidates
+
+    def has_triangle_error_in(self, points):
+        intersection = solve_intersection(points)
+        if intersection is None:
+            return False
+        s, t = intersection
+        return (0 < s < 1 and t > 1) or (s > 1 and 0 < t < 1)
+
+    def gsnodes2vectors(self, nodes):
+        return [Vector(node.x, node.y) for node in nodes]
+
     def generateCustomParameter( self ):
-        return "%s; Dummy:%s;" % (
+        return "{}; Dummy:{};".format(
             self.__class__.__name__,
             Glyphs.defaults['dummy_param']
         )
@@ -71,3 +132,11 @@ class FixTriangleErrors(FilterWithDialog):
     def __file__(self):
         """Please leave this method unchanged"""
         return __file__
+
+    def logToConsole( self, message ):
+        """
+        The variable 'message' will be passed to Console.app.
+        Use self.logToConsole( "bla bla" ) for debugging.
+        """
+        myLog = "Filter {}:\n{}".format( self.title(), message )
+        NSLog( myLog )
