@@ -25,9 +25,12 @@ def cross_product(p1, p2):
     return p1.x*p2.y - p1.y*p2.x
 
 def twenty_times_segment_area(points):
-    p0, p1, p2, p3 = points
-
-    return 6*cross_product(p0, p1) + 3*cross_product(p0, p2) + cross_product(p0, p3) + 3*cross_product(p1, p2) + 3*cross_product(p1, p3) + 6*cross_product(p2, p3)
+    if len(points) == 4:
+        p0, p1, p2, p3 = points
+        return 6*cross_product(p0, p1) + 3*cross_product(p0, p2) + cross_product(p0, p3) + 3*cross_product(p1, p2) + 3*cross_product(p1, p3) + 6*cross_product(p2, p3)
+    else:
+        p0, p1 = points
+        return 10*cross_product(p0, p1)
 
 class Vector(object):
     def __init__(self, x, y, do_round=False):
@@ -46,3 +49,6 @@ class Vector(object):
 
     def __mul__(self, other):
         return cross_product(self, other)
+
+    def __repr__(self):
+        return "<math2.Vector object x={} y={}>".format(self.x, self.y)

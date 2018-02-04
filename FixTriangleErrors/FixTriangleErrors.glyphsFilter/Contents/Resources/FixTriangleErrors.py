@@ -19,6 +19,22 @@ from GlyphsApp import *
 from GlyphsApp.plugins import *
 from math2 import solve_intersection, dist, twenty_times_segment_area, Vector
 
+PRECISE = True
+
+def createRemoveOverlapFilter():
+    font = Glyphs.font
+    thisFilter = NSClassFromString("GlyphsFilterRemoveOverlap").alloc().init()
+    thisFilter.setController_(font.currentTab)
+    return thisFilter
+
+def create_path(points):
+    new_path = GSPath()
+    for pt in points:
+        pt2 = GSNode(type=pt.type, x=pt.x, y=pt.y)
+        new_path.points.append(pt2)
+    new_path.setClosePath_(True)
+    return new_path
+
 class FixTriangleErrors(FilterWithDialog):
 
     # Definitions of IBOutlets
@@ -67,11 +83,14 @@ class FixTriangleErrors(FilterWithDialog):
             for segment in path.segments:
                 if segment.type != "curve":
                     continue
-                if not self.has_triangle_error_in(segment.points):
+                intersection_param = self.triangle_error_of(segment.points)
+                if intersection_param is None:
                     continue
-                self.fix_triangle_error(segment)
+                self.fix_triangle_error(segment, intersection_param)
 
-    def fix_triangle_error(self, segment):
+    def fix_triangle_error(self, segment, intersection_param):
+        removeOverlapFilter = createRemoveOverlapFilter()
+
         # area1 := twenty_times_segment_area([p0, p1, p2, p3])
         # area2 := twenty_times_segment_area([p0, p0+s*(p1-p0)+p0, p3+t*(p2-p3), p3])
         # area := abs(area2 - area1)
@@ -79,30 +98,61 @@ class FixTriangleErrors(FilterWithDialog):
         # (Solution) Expand given formula and set area = abs(a*s*t + b*t + c*s + d), then t = - (c*s+d)/(a*s+b).
         points = self.gsnodes2vectors(segment.points)
         p0, p1, p2, p3 = points
-        candidates = self.calculate_s_t_candidates(points)
+        candidates = self.calculate_s_t_candidates(points, intersection_param)
+        area2points = {}
         for s, t in candidates:
             result = self.try_update_points(points, s, t)
             if result is not None:
                 p1, p2 = result
-                self.update_point(segment.points[1], p1)
-                self.update_point(segment.points[2], p2)
-                return
+                if not PRECISE:
+                    self.update_point(segment.points[1], p1)
+                    self.update_point(segment.points[2], p2)
+                    return
+                area = self.calculate_area_of_original_and_perturbed_segments(segment.points, p1, p2, removeOverlapFilter)
+                area2points[area] = (p1, p2)
+        if area2points:
+            # pick points according to the minimal area
+            p1, p2 = sorted(area2points.items())[0][1]
+            self.update_point(segment.points[1], p1)
+            self.update_point(segment.points[2], p2)
 
     def update_point(self, dst_pt, src_pt):
         dst_pt.x = src_pt.x
         dst_pt.y = src_pt.y
 
+    def calculate_area_of_original_and_perturbed_segments(self, points, p1, p2, removeOverlapFilter):
+        u"""
+        :param list_of_GSNode points: original points consisting original segment
+        :param Vector p1: perturbed point of points[1]
+        :param Vector p2: perturbed point of points[2]
+        """
+
+        p1_ = GSNode(type=points[1].type, x=p1.x, y=p2.y)
+        p2_ = GSNode(type=points[2].type, x=p1.x, y=p2.y)
+        points = [points[0], points[1], points[2], points[3], p2_, p1_]
+        path = create_path(points)
+        layer = GSLayer()
+        layer.paths.append(path)
+        removeOverlapFilter.runFilterWithLayer_error_(layer, None)
+        total_area = 0
+        for path in layer.paths:
+            area = 0
+            for segment in path.segments:
+                area += twenty_times_segment_area(segment.points)
+            total_area += abs(area)
+        return total_area
+
     def try_update_points(self, points, s, t):
         p0, p1, p2, p3 = points
         p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
         p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
-        points = [p0, p1_, p2_, p3]
-        if self.has_triangle_error_in(points):
+        perturbed_points = [p0, p1_, p2_, p3]
+        if self.triangle_error_of(perturbed_points) is not None:
             return None
 
         return p1_, p2_
 
-    def calculate_s_t_candidates(self, points):
+    def calculate_s_t_candidates(self, points, intersection_param):
         p0, p1, p2, p3 = points
         area1 = twenty_times_segment_area(points)
         a = 3*((p1-p0)*(p2-p3))
@@ -111,8 +161,10 @@ class FixTriangleErrors(FilterWithDialog):
         d = 10*(p0*p3) - area1
 
         candidates = []
-        ratios = [0.9, 0.8, 0.7]
-        if dist(p0, p1) >= dist(p2, p3):
+        ratios = [.9, .8, .7, .6, .5]
+        # the intersetion is on the handle of p0 and p1
+        if 0 <= intersection_param[0] <= 1:
+            # shorten the handle of p0 and p1
             for s in ratios:
                 if a*s+b == 0:
                     continue
@@ -126,12 +178,15 @@ class FixTriangleErrors(FilterWithDialog):
                 candidates.append((s, t))
         return candidates
 
-    def has_triangle_error_in(self, points):
+    def triangle_error_of(self, points):
         intersection = solve_intersection(points)
         if intersection is None:
-            return False
+            return None
         s, t = intersection
-        return (0 < s < 1 and t > 1) or (s > 1 and 0 < t < 1)
+        if (0 <= s <= 1 and t >= 1) or (s >= 1 and 0 <= t <= 1):
+            return s, t
+        else:
+            return None
 
     def gsnodes2vectors(self, nodes):
         return [Vector(node.x, node.y) for node in nodes]
