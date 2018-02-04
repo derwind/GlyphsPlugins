@@ -79,24 +79,37 @@ class FixTriangleErrors(FilterWithDialog):
         # (Solution) Expand given formula and set area = abs(a*s*t + b*t + c*s + d), then t = - (c*s+d)/(a*s+b).
         points = self.gsnodes2vectors(segment.points)
         p0, p1, p2, p3 = points
+        candidates = self.calculate_s_t_candidates(points)
+        for s, t in candidates:
+            result = self.try_update_points(points, s, t)
+            if result is not None:
+                p1, p2 = result
+                self.update_point(segment.points[1], p1)
+                self.update_point(segment.points[2], p2)
+                return
+
+    def update_point(self, dst_pt, src_pt):
+        dst_pt.x = src_pt.x
+        dst_pt.y = src_pt.y
+
+    def try_update_points(self, points, s, t):
+        p0, p1, p2, p3 = points
+        p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
+        p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
+        points = [p0, p1_, p2_, p3]
+        if self.has_triangle_error_in(points):
+            return None
+
+        return p1_, p2_
+
+    def calculate_s_t_candidates(self, points):
+        p0, p1, p2, p3 = points
         area1 = twenty_times_segment_area(points)
         a = 3*((p1-p0)*(p2-p3))
         b = 6*(p2*p3+p0*(p2-p3))
         c = 6*(p0*p1+(p1-p0)*p3)
         d = 10*(p0*p3) - area1
-        candidates = self.calculate_s_t_candidates(p0, p1, p2, p3, a, b, c, d)
-        for s, t in candidates:
-            p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
-            p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
-            points = [p0, p1_, p2_, p3]
-            if not self.has_triangle_error_in(points):
-                segment.points[1].x = p1_.x
-                segment.points[1].y = p1_.y
-                segment.points[2].x = p2_.x
-                segment.points[2].y = p2_.y
-                return
 
-    def calculate_s_t_candidates(self, p0, p1, p2, p3, a, b, c, d):
         candidates = []
         ratios = [0.9, 0.8, 0.7]
         if dist(p0, p1) >= dist(p2, p3):
