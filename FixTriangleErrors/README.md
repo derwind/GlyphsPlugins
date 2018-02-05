@@ -15,6 +15,8 @@ It fixes relatively easy triangle errors.
 
 The plugin requires app version 2.4.4 (1075) or later, running on OS X 10.13.3 or later. (Merely I confirmed the plugin only under these conditions...)
 
+Also [objectsGS.py](https://github.com/schriftgestalt/Glyphs-Scripts/blob/master/objectsGS.py) must be put in the Script folder.
+
 ### License
 
 Copyright 2018 derwind
