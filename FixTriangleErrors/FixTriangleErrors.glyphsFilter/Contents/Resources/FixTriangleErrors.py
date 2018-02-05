@@ -161,7 +161,7 @@ class FixTriangleErrors(FilterWithDialog):
         d = 10*(p0*p3) - area1
 
         candidates = []
-        ratios = [.9, .8, .7, .6, .5]
+        ratios = [1.5, 1.4, 1.3, 1.2, 1.1, .9, .8, .7, .6, .5,]
         # the intersetion is on the handle of p0 and p1
         if 0 <= intersection_param[0] <= 1:
             # shorten the handle of p0 and p1
