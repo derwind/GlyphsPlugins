@@ -169,13 +169,15 @@ class FixTriangleErrors(FilterWithDialog):
                 if a*s+b == 0:
                     continue
                 t = - 1.*(c*s+d)/(a*s+b)
-                candidates.append((s, t))
+                if t > 0:
+                    candidates.append((s, t))
         else:
             for t in ratios:
                 if a*t+c == 0:
                     continue
                 s = - 1.*(b*t+d)/(a*t+c)
-                candidates.append((s, t))
+                if s > 0:
+                    candidates.append((s, t))
         return candidates
 
     def triangle_error_of(self, points):
