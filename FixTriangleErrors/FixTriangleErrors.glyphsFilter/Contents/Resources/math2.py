@@ -32,6 +32,19 @@ def twenty_times_segment_area(points):
         p0, p1 = points
         return 10*cross_product(p0, p1)
 
+def bezier(points, t):
+    if t < 0 or t > 1:
+        return None
+    if len(points) == 4:
+        p0, p1, p2, p3 = points
+        x = (1-t)**3 * p0.x + 3*(1-t)**2 * t * p1.x + 3 * (1-t) * t**2 * p2.x + t**3 * p3.x
+        y = (1-t)**3 * p0.y + 3*(1-t)**2 * t * p1.y + 3 * (1-t) * t**2 * p2.y + t**3 * p3.y
+    else:
+        p0, p1 = points
+        x = (1-t) * p0.x + t * p1.x
+        y = (1-t) * p0.y + t * p1.y
+    return Vector(x, y)
+
 class Vector(object):
     def __init__(self, x, y, do_round=False):
         if do_round:

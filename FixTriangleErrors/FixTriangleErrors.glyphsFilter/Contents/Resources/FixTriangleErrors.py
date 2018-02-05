@@ -89,7 +89,7 @@ class FixTriangleErrors(FilterWithDialog):
                 self.fix_triangle_error(segment, intersection_param)
 
     def fix_triangle_error(self, segment, intersection_param):
-        removeOverlapFilter = createRemoveOverlapFilter()
+        #removeOverlapFilter = createRemoveOverlapFilter()
 
         # area1 := twenty_times_segment_area([p0, p1, p2, p3])
         # area2 := twenty_times_segment_area([p0, p0+s*(p1-p0)+p0, p3+t*(p2-p3), p3])
@@ -108,7 +108,7 @@ class FixTriangleErrors(FilterWithDialog):
                     self.update_point(segment.points[1], p1)
                     self.update_point(segment.points[2], p2)
                     return
-                area = self.calculate_area_of_original_and_perturbed_segments(segment.points, p1, p2, removeOverlapFilter)
+                area = self.calculate_area_of_original_and_perturbed_segments(segment.points, p1, p2)
                 area2points[area] = (p1, p2)
         if area2points:
             # pick points according to the minimal area
@@ -120,7 +120,7 @@ class FixTriangleErrors(FilterWithDialog):
         dst_pt.x = src_pt.x
         dst_pt.y = src_pt.y
 
-    def calculate_area_of_original_and_perturbed_segments(self, points, p1, p2, removeOverlapFilter):
+    def calculate_area_of_original_and_perturbed_segments(self, points, p1, p2):
         u"""
         :param list_of_GSNode points: original points consisting original segment
         :param Vector p1: perturbed point of points[1]
@@ -133,7 +133,8 @@ class FixTriangleErrors(FilterWithDialog):
         path = create_path(points)
         layer = GSLayer()
         layer.paths.append(path)
-        removeOverlapFilter.runFilterWithLayer_error_(layer, None)
+        #removeOverlapFilter.runFilterWithLayer_error_(layer, None)
+        layer.removeOverlap()
         total_area = 0
         for path in layer.paths:
             area = 0
