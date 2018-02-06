@@ -19,7 +19,10 @@ from GlyphsApp import *
 from GlyphsApp.plugins import *
 from math2 import solve_intersection, dist, twenty_times_segment_area, Vector
 
-PRECISE = True
+class Mode(object):
+    FAST, MEDIUM, SLOW = range(3)
+
+fix_mode = Mode.MEDIUM
 
 def createRemoveOverlapFilter():
     font = Glyphs.font
@@ -80,13 +83,21 @@ class FixTriangleErrors(FilterWithDialog):
             pass
 
         for path in layer.paths:
+            fixable_intersections_pathtimes = set()
             for segment in path.segments:
                 if segment.type != "curve":
                     continue
                 s_t = self.triangle_error_of(segment.points)
                 if s_t is None:
+                    if fix_mode > Mode.MEDIUM:
+                        if self.triangle_error_of(segment.points, proper=True) is not None:
+                            if self.can_fix_intersection(segment):
+                                # record segments' end point's index
+                                fixable_intersections_pathtimes.add(path.points.index(segment.points[-1]))
                     continue
                 self.fix_triangle_error(segment, s_t)
+            for pathtime in sorted(fixable_intersections_pathtimes, reverse=True):
+                path.insertNodeWithPathTime_(pathtime + .5)
 
     def fix_triangle_error(self, segment, s_t):
         #removeOverlapFilter = createRemoveOverlapFilter()
@@ -104,7 +115,7 @@ class FixTriangleErrors(FilterWithDialog):
             result = self.try_update_points(points, s, t)
             if result is not None:
                 p1, p2 = result
-                if not PRECISE:
+                if fix_mode == Mode.FAST:
                     self.update_point(segment.points[1], p1)
                     self.update_point(segment.points[2], p2)
                     return
@@ -115,6 +126,23 @@ class FixTriangleErrors(FilterWithDialog):
             p1, p2 = sorted(area2points.items())[0][1]
             self.update_point(segment.points[1], p1)
             self.update_point(segment.points[2], p2)
+
+    def can_fix_intersection(self, segment):
+        u"""
+        check that the intersection can be fixed by the segment is splitted at the half point
+        """
+
+        points = [segment.points[0], segment.points[1], segment.points[2], segment.points[3], segment.points[2], segment.points[1]]
+        path = create_path(points)
+        layer = GSLayer()
+        layer.paths.append(path)
+        if layer.paths[0].insertNodeWithPathTime_(.5) is None:
+            return False
+        for seg_idx in range(len(layer.paths[0].segments)-1):
+            segment = layer.paths[0].segments[seg_idx]
+            if len(segment.points) == 4 and self.triangle_error_of(segment.points, easy_only=False) is not None:
+                return False
+        return True
 
     def update_point(self, dst_pt, src_pt):
         dst_pt.x = src_pt.x
@@ -196,15 +224,15 @@ class FixTriangleErrors(FilterWithDialog):
         if intersection is None:
             return None
         s, t = intersection
-        if easy_only:
-            # relatively easy case
-            if (0 <= s <= 1 and t >= 1) or (s >= 1 and 0 <= t <= 1):
-                return s, t
+        if proper:
+            # proper intersection case
+            if 0 < s < 1 and 0 < t < 1:
+                return s,t
         else:
-            if proper:
-                # proper intersection case
-                if 0 < s < 1 and 0 < t < 1:
-                    return s,t
+            if easy_only:
+                # relatively easy case
+                if (0 <= s <= 1 and t >= 1) or (s >= 1 and 0 <= t <= 1):
+                    return s, t
             else:
                 # all cases
                 if 0 <= s <= 1 or 0 <= t <= 1:
