@@ -22,7 +22,7 @@ from math2 import solve_intersection, dist, twenty_times_segment_area, Vector
 class Mode(object):
     FAST, MEDIUM, SLOW = range(3)
 
-fix_mode = Mode.MEDIUM
+fix_mode = Mode.SLOW
 
 def createRemoveOverlapFilter():
     font = Glyphs.font
@@ -132,15 +132,14 @@ class FixTriangleErrors(FilterWithDialog):
         check that the intersection can be fixed by the segment is splitted at the half point
         """
 
-        points = [segment.points[0], segment.points[1], segment.points[2], segment.points[3], segment.points[2], segment.points[1]]
+        points = [segment.points[1], segment.points[2], segment.points[3], segment.points[2], segment.points[1], segment.points[0]]
         path = create_path(points)
         layer = GSLayer()
         layer.paths.append(path)
-        if layer.paths[0].insertNodeWithPathTime_(.5) is None:
+        if layer.paths[0].insertNodeWithPathTime_(2.5) is None:
             return False
-        for seg_idx in range(len(layer.paths[0].segments)-1):
-            segment = layer.paths[0].segments[seg_idx]
-            if len(segment.points) == 4 and self.triangle_error_of(segment.points, easy_only=False) is not None:
+        for segment in layer.paths[0].segments[:-1]:
+            if len(segment.points) == 4 and self.triangle_error_of(segment.points, easy_only=False, do_round=True) is not None:
                 return False
         return True
 
@@ -157,7 +156,7 @@ class FixTriangleErrors(FilterWithDialog):
 
         p1_ = GSNode(type=points[1].type, x=p1.x, y=p2.y)
         p2_ = GSNode(type=points[2].type, x=p1.x, y=p2.y)
-        points = [points[0], points[1], points[2], points[3], p2_, p1_]
+        points = [points[1], points[2], points[3], p2_, p1_, points[0]]
         path = create_path(points)
         layer = GSLayer()
         layer.paths.append(path)
@@ -209,7 +208,7 @@ class FixTriangleErrors(FilterWithDialog):
                     candidates.append((s, t))
         return candidates
 
-    def triangle_error_of(self, points, easy_only=True, proper=False):
+    def triangle_error_of(self, points, easy_only=True, proper=False, do_round=False):
         u"""
         detect triangle errors
 
@@ -219,6 +218,9 @@ class FixTriangleErrors(FilterWithDialog):
         :return: two bezier parameters
         :rtype: tuple of int
         """
+
+        if do_round:
+            points = [GSNode(type=pt.type, x=int(round(pt.x)), y=int(round(pt.y))) for pt in points]
 
         intersection = solve_intersection(points)
         if intersection is None:
