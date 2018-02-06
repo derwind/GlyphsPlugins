@@ -148,7 +148,7 @@ class FixTriangleErrors(FilterWithDialog):
         p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
         p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
         perturbed_points = [p0, p1_, p2_, p3]
-        if self.triangle_error_of(perturbed_points, proper=True) is not None:
+        if self.triangle_error_of(perturbed_points, easy=False) is not None:
             return None
 
         return p1_, p2_
@@ -181,17 +181,19 @@ class FixTriangleErrors(FilterWithDialog):
                     candidates.append((s, t))
         return candidates
 
-    def triangle_error_of(self, points, proper=False):
+    def triangle_error_of(self, points, easy=True):
         intersection = solve_intersection(points)
         if intersection is None:
             return None
         s, t = intersection
-        if proper:
-            if 0 <= s <= 1 or 0 <= t <= 1:
-                return s,t
-        else:
+        if easy:
+            # relatively easy case
             if (0 <= s <= 1 and t >= 1) or (s >= 1 and 0 <= t <= 1):
                 return s, t
+        else:
+            # all cases
+            if 0 <= s <= 1 or 0 <= t <= 1:
+                return s,t
         return None
 
     def gsnodes2vectors(self, nodes):
