@@ -83,12 +83,12 @@ class FixTriangleErrors(FilterWithDialog):
             for segment in path.segments:
                 if segment.type != "curve":
                     continue
-                intersection_param = self.triangle_error_of(segment.points)
-                if intersection_param is None:
+                s_t = self.triangle_error_of(segment.points)
+                if s_t is None:
                     continue
-                self.fix_triangle_error(segment, intersection_param)
+                self.fix_triangle_error(segment, s_t)
 
-    def fix_triangle_error(self, segment, intersection_param):
+    def fix_triangle_error(self, segment, s_t):
         #removeOverlapFilter = createRemoveOverlapFilter()
 
         # area1 := twenty_times_segment_area([p0, p1, p2, p3])
@@ -98,7 +98,7 @@ class FixTriangleErrors(FilterWithDialog):
         # (Solution) Expand given formula and set area = abs(a*s*t + b*t + c*s + d), then t = - (c*s+d)/(a*s+b).
         points = self.gsnodes2vectors(segment.points)
         p0, p1, p2, p3 = points
-        candidates = self.calculate_s_t_candidates(points, intersection_param)
+        candidates = self.calculate_s_t_candidates(points, s_t)
         area2points = {}
         for s, t in candidates:
             result = self.try_update_points(points, s, t)
@@ -122,7 +122,7 @@ class FixTriangleErrors(FilterWithDialog):
 
     def calculate_area_of_original_and_perturbed_segments(self, points, p1, p2):
         u"""
-        :param list_of_GSNode points: original points consisting original segment
+        :param list_of_GSNode points: original points belonging to original segment
         :param Vector p1: perturbed point of points[1]
         :param Vector p2: perturbed point of points[2]
         """
@@ -148,12 +148,12 @@ class FixTriangleErrors(FilterWithDialog):
         p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
         p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
         perturbed_points = [p0, p1_, p2_, p3]
-        if self.triangle_error_of(perturbed_points, easy=False) is not None:
+        if self.triangle_error_of(perturbed_points, easy_only=False) is not None:
             return None
 
         return p1_, p2_
 
-    def calculate_s_t_candidates(self, points, intersection_param):
+    def calculate_s_t_candidates(self, points, s_t):
         p0, p1, p2, p3 = points
         area1 = twenty_times_segment_area(points)
         a = 3*((p1-p0)*(p2-p3))
@@ -164,7 +164,7 @@ class FixTriangleErrors(FilterWithDialog):
         candidates = []
         ratios = [1.5, 1.4, 1.3, 1.2, 1.1, .9, .8, .7, .6, .5,]
         # the intersetion is on the handle of p0 and p1
-        if 0 <= intersection_param[0] <= 1:
+        if 0 <= s_t[0] <= 1:
             # shorten the handle of p0 and p1
             for s in ratios:
                 if a*s+b == 0:
@@ -181,19 +181,34 @@ class FixTriangleErrors(FilterWithDialog):
                     candidates.append((s, t))
         return candidates
 
-    def triangle_error_of(self, points, easy=True):
+    def triangle_error_of(self, points, easy_only=True, proper=False):
+        u"""
+        detect triangle errors
+
+        :param list points: points belonging to a curve
+        :param boolean easy_only: detect only relatively easy case
+        :param boolean proper: detect proper intersections
+        :return: two bezier parameters
+        :rtype: tuple of int
+        """
+
         intersection = solve_intersection(points)
         if intersection is None:
             return None
         s, t = intersection
-        if easy:
+        if easy_only:
             # relatively easy case
             if (0 <= s <= 1 and t >= 1) or (s >= 1 and 0 <= t <= 1):
                 return s, t
         else:
-            # all cases
-            if 0 <= s <= 1 or 0 <= t <= 1:
-                return s,t
+            if proper:
+                # proper intersection case
+                if 0 < s < 1 and 0 < t < 1:
+                    return s,t
+            else:
+                # all cases
+                if 0 <= s <= 1 or 0 <= t <= 1:
+                    return s,t
         return None
 
     def gsnodes2vectors(self, nodes):
