@@ -163,6 +163,8 @@ class FixTriangleErrors(FilterWithDialog):
 
     def calculate_area_of_original_and_perturbed_segments(self, points, p1, p2):
         u"""
+        calculate area of region made by original and perturbed segments
+
         :param list_of_GSNode points: original points belonging to original segment
         :param Vector p1: perturbed point of points[1]
         :param Vector p2: perturbed point of points[2]
@@ -185,6 +187,14 @@ class FixTriangleErrors(FilterWithDialog):
         return total_area
 
     def try_update_points(self, points, s, t):
+        u"""
+        calculate perturbed points which fix triangle error
+
+        :param list_of_GSNode points: original points belonging to original segment
+        :param float s: parameter fot p0 and p1
+        :param float t: parameter fot p2 and p3
+        """
+
         p0, p1, p2, p3 = points
         p1_ = Vector(p0.x+s*(p1.x-p0.x), p0.y+s*(p1.y-p0.y), True)
         p2_ = Vector(p3.x+t*(p2.x-p3.x), p3.y+t*(p2.y-p3.y), True)
