@@ -101,6 +101,13 @@ class FixTriangleErrors(FilterWithDialog):
                 path.insertNodeWithPathTime_(pathtime_integer + pathtime_decimal)
 
     def fix_triangle_error(self, segment, s_t):
+        u"""
+        fix triangle error of segment
+
+        :param RSegment segment: segment having a triangle error
+        :param tuple_of_float s_t: parameter fot p0 and p1 / p2 and p3 for triangle error
+        """
+
         #removeOverlapFilter = createRemoveOverlapFilter()
 
         # area1 := twenty_times_segment_area([p0, p1, p2, p3])
@@ -205,6 +212,14 @@ class FixTriangleErrors(FilterWithDialog):
         return p1_, p2_
 
     def calculate_s_t_candidates(self, points, s_t):
+        u"""
+        fix triangle error of segment
+
+        :param list_of_GSNode points: points of segment having a triangle error
+        :param tuple_of_float s_t: parameter fot p0 and p1 / p2 and p3 for triangle error
+        :return: candidates of s, t values which fix triangle error
+        """
+
         p0, p1, p2, p3 = points
         area1 = twenty_times_segment_area(points)
         a = 3*((p1-p0)*(p2-p3))
