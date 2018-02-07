@@ -135,7 +135,7 @@ class FixTriangleErrors(FilterWithDialog):
 
         ok_pathtime_decimals = set()
         points = segment.points
-        for pathtime_decimal in [.1, .2, .3, .4, .5, .6, .7, .8, .9]:
+        for pathtime_decimal in [.3, .4, .5, .6, .7]:
             points = [points[1], points[2], points[3], points[2], points[1], points[0]]
             path = create_path(points)
             layer = GSLayer()
@@ -203,7 +203,7 @@ class FixTriangleErrors(FilterWithDialog):
         d = 10*(p0*p3) - area1
 
         candidates = []
-        ratios = [1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, .9, .8, .7, .6, .5, .4, .3, .2, .1]
+        ratios = [1.4, 1.3, 1.2, 1.1, .9, .8, .7, .6, .5, .4, .3]
         # the intersetion is on the handle of p0 and p1
         if 0 <= s_t[0] <= 1:
             # shorten the handle of p0 and p1
