@@ -17,7 +17,7 @@
 import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
-from math2 import solve_intersection, dist, twenty_times_segment_area, Vector
+from math2 import solve_intersection, dist, twenty_times_segment_area, points2vectors, Vector
 
 class Mode(object):
     FAST, MEDIUM, SLOW = range(3)
@@ -83,7 +83,7 @@ class FixTriangleErrors(FilterWithDialog):
             pass
 
         for path in layer.paths:
-            fixable_intersections_pathtimes = set()
+            fixable_intersections_pathtimes = {}
             for segment in path.segments:
                 if segment.type != "curve":
                     continue
@@ -91,13 +91,14 @@ class FixTriangleErrors(FilterWithDialog):
                 if s_t is None:
                     if fix_mode > Mode.MEDIUM:
                         if self.triangle_error_of(segment.points, proper=True) is not None:
-                            if self.can_fix_intersection(segment):
+                            pathtime_decimal = self.try_fix_intersection(segment)
+                            if pathtime_decimal is not None:
                                 # record segments' end point's index
-                                fixable_intersections_pathtimes.add(path.points.index(segment.points[-1]))
+                                fixable_intersections_pathtimes[path.points.index(segment.points[-1])] = pathtime_decimal
                     continue
                 self.fix_triangle_error(segment, s_t)
-            for pathtime in sorted(fixable_intersections_pathtimes, reverse=True):
-                path.insertNodeWithPathTime_(pathtime + .5)
+            for pathtime_integer, pathtime_decimal in sorted(fixable_intersections_pathtimes.items(), reverse=True):
+                path.insertNodeWithPathTime_(pathtime_integer + pathtime_decimal)
 
     def fix_triangle_error(self, segment, s_t):
         #removeOverlapFilter = createRemoveOverlapFilter()
@@ -107,7 +108,7 @@ class FixTriangleErrors(FilterWithDialog):
         # area := abs(area2 - area1)
         # (Problem) Assuming that 's' is given, then solve 't' which minimizes the area.
         # (Solution) Expand given formula and set area = abs(a*s*t + b*t + c*s + d), then t = - (c*s+d)/(a*s+b).
-        points = self.gsnodes2vectors(segment.points)
+        points = points2vectors(segment.points)
         p0, p1, p2, p3 = points
         candidates = self.calculate_s_t_candidates(points, s_t)
         area2points = {}
@@ -127,21 +128,34 @@ class FixTriangleErrors(FilterWithDialog):
             self.update_point(segment.points[1], p1)
             self.update_point(segment.points[2], p2)
 
-    def can_fix_intersection(self, segment):
+    def try_fix_intersection(self, segment):
         u"""
-        check that the intersection can be fixed by the segment is splitted at the half point
+        check that the intersection can be fixed by the segment is splitted
         """
 
-        points = [segment.points[1], segment.points[2], segment.points[3], segment.points[2], segment.points[1], segment.points[0]]
-        path = create_path(points)
-        layer = GSLayer()
-        layer.paths.append(path)
-        if layer.paths[0].insertNodeWithPathTime_(2.5) is None:
-            return False
-        for segment in layer.paths[0].segments[:-1]:
-            if len(segment.points) == 4 and self.triangle_error_of(segment.points, easy_only=False, do_round=True) is not None:
-                return False
-        return True
+        ok_pathtime_decimals = set()
+        points = segment.points
+        for pathtime_decimal in [.1, .2, .3, .4, .5, .6, .7, .8, .9]:
+            points = [points[1], points[2], points[3], points[2], points[1], points[0]]
+            path = create_path(points)
+            layer = GSLayer()
+            layer.paths.append(path)
+
+            if layer.paths[0].insertNodeWithPathTime_(2+pathtime_decimal) is None:
+                continue
+            ok = True
+            for segment in layer.paths[0].segments[:-1]:
+                # We need to check only curve segments which consist of four points.
+                if len(segment.points) == 4 and self.triangle_error_of(segment.points, easy_only=False, do_round=True) is not None:
+                    ok = False
+                    break
+            if not ok:
+                continue
+            ok_pathtime_decimals.add(pathtime_decimal)
+        if ok_pathtime_decimals:
+            return sorted(ok_pathtime_decimals, key=lambda v: abs(.5 - v))[0]
+        else:
+            return None
 
     def update_point(self, dst_pt, src_pt):
         dst_pt.x = src_pt.x
@@ -189,7 +203,7 @@ class FixTriangleErrors(FilterWithDialog):
         d = 10*(p0*p3) - area1
 
         candidates = []
-        ratios = [1.5, 1.4, 1.3, 1.2, 1.1, .9, .8, .7, .6, .5,]
+        ratios = [1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.1, .9, .8, .7, .6, .5, .4, .3, .2, .1]
         # the intersetion is on the handle of p0 and p1
         if 0 <= s_t[0] <= 1:
             # shorten the handle of p0 and p1
@@ -237,12 +251,9 @@ class FixTriangleErrors(FilterWithDialog):
                     return s, t
             else:
                 # all cases
-                if 0 <= s <= 1 or 0 <= t <= 1:
+                if 0 <= s <= 1 or 0 <= t <= 1 or s == float("inf"):
                     return s,t
         return None
-
-    def gsnodes2vectors(self, nodes):
-        return [Vector(node.x, node.y) for node in nodes]
 
     def generateCustomParameter( self ):
         return "{}; Dummy:{};".format(
