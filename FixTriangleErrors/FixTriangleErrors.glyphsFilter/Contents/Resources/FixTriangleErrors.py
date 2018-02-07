@@ -22,7 +22,7 @@ from math2 import solve_intersection, dist, twenty_times_segment_area, points2ve
 class Mode(object):
     FAST, MEDIUM, SLOW = range(3)
 
-fix_mode = Mode.SLOW
+fix_mode = Mode.MEDIUM
 
 def createRemoveOverlapFilter():
     font = Glyphs.font
