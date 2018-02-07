@@ -85,7 +85,7 @@ class FixTriangleErrors(FilterWithDialog):
         for path in layer.paths:
             fixable_intersections_pathtimes = {}
             for segment in path.segments:
-                if segment.type != "curve":
+                if segment.type != CURVE:
                     continue
                 s_t = self.triangle_error_of(segment.points)
                 if s_t is None:
