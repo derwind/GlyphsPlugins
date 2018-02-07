@@ -22,7 +22,10 @@ from math2 import solve_intersection, dist, twenty_times_segment_area, points2ve
 class Mode(object):
     FAST, MEDIUM, SLOW = range(3)
 
-fix_mode = Mode.MEDIUM
+# fix mode. If FAST is selected, only relatively easy errors will be fixed.
+fix_mode = Mode.SLOW
+# cut segments which have handles intersection by flexible parameters, or cur segments at their half point
+FLEXIBLE_CUT = False
 
 def createRemoveOverlapFilter():
     font = Glyphs.font
@@ -90,15 +93,40 @@ class FixTriangleErrors(FilterWithDialog):
                 s_t = self.triangle_error_of(segment.points)
                 if s_t is None:
                     if fix_mode > Mode.MEDIUM:
-                        if self.triangle_error_of(segment.points, proper=True) is not None:
-                            pathtime_decimal = self.try_fix_intersection(segment)
-                            if pathtime_decimal is not None:
-                                # record segments' end point's index
-                                fixable_intersections_pathtimes[path.points.index(segment.points[-1])] = pathtime_decimal
+                        self.memory_handles_intersections_if_exists(path, segment, fixable_intersections_pathtimes)
                     continue
                 self.fix_triangle_error(segment, s_t)
+
+            # process finished up to MEDIUM
+            if fix_mode <= Mode.MEDIUM:
+                return
+
+            # cut segments which have handles intersection
             for pathtime_integer, pathtime_decimal in sorted(fixable_intersections_pathtimes.items(), reverse=True):
                 path.insertNodeWithPathTime_(pathtime_integer + pathtime_decimal)
+            # adjust handles of cut segments
+            if not FLEXIBLE_CUT and fixable_intersections_pathtimes:
+                # fix segments again because some segments are newly created
+                for segment in path.segments:
+                    if segment.type != CURVE:
+                        continue
+                    s_t = self.triangle_error_of(segment.points)
+                    if s_t is None:
+                        continue
+                    self.fix_triangle_error(segment, s_t)
+
+    def memory_handles_intersections_if_exists(self, path, segment, fixable_intersections_pathtimes):
+        if self.triangle_error_of(segment.points, proper=True) is None:
+            return
+
+        if FLEXIBLE_CUT:
+            pathtime_decimal = self.try_fix_intersection(segment)
+            if pathtime_decimal is not None:
+                # record segments' end point's index
+                fixable_intersections_pathtimes[path.points.index(segment.points[-1])] = pathtime_decimal
+        else:
+            if self.can_fix_intersection(segment):
+                fixable_intersections_pathtimes[path.points.index(segment.points[-1])] = .5
 
     def fix_triangle_error(self, segment, s_t):
         u"""
@@ -164,6 +192,34 @@ class FixTriangleErrors(FilterWithDialog):
         else:
             return None
 
+    def can_fix_intersection(self, segment):
+        u"""
+        check that the intersection can be fixed by the segment is splitted
+        """
+
+        points = segment.points
+        points = [points[1], points[2], points[3], points[2], points[1], points[0]]
+        path = create_path(points)
+        layer = GSLayer()
+        layer.paths.append(path)
+
+        if layer.paths[0].insertNodeWithPathTime_(2.5) is None:
+            return False
+        for segment in layer.paths[0].segments[:-1]:
+            # We need to check only curve segments which consist of four points.
+            if len(segment.points) == 4:
+                s_t = self.triangle_error_of(segment.points, do_round=True)
+                if s_t is not None:
+                    points = points2vectors(segment.points)
+                    ok = False
+                    for s, t in self.calculate_s_t_candidates(points, s_t):
+                        if self.try_update_points(points, s, t) is not None:
+                            ok = True
+                            break
+                    if not ok:
+                        return False
+        return True
+
     def update_point(self, dst_pt, src_pt):
         dst_pt.x = src_pt.x
         dst_pt.y = src_pt.y
@@ -213,7 +269,7 @@ class FixTriangleErrors(FilterWithDialog):
 
     def calculate_s_t_candidates(self, points, s_t):
         u"""
-        fix triangle error of segment
+        calculate candidates of s, t values which fix triangle error
 
         :param list_of_GSNode points: points of segment having a triangle error
         :param tuple_of_float s_t: parameter fot p0 and p1 / p2 and p3 for triangle error
