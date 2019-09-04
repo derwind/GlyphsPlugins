@@ -22,9 +22,6 @@ class QRemoveOverlap(FilterWithoutDialog):
         self.keyboardShortcut = None # With Cmd+Shift
 
     def filter(self, layer, inEditView, customParameters):
-
-        # Apply your filter code here
-
         layer.removeOverlap(checkSelection=True)
         for path in layer.paths:
             path.convertToQuadratic()
