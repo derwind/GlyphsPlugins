@@ -11,7 +11,8 @@
 #
 ###########################################################################################################
 
-
+import objc
+from GlyphsApp import *
 from GlyphsApp.plugins import *
 
 class ShowPosition (PalettePlugin):
